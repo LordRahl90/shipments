@@ -1,0 +1,71 @@
+name: Test and Build
+on:
+  push:
+    branches:
+      - "main"
+      - "testing"
+
+  pull_request:
+    branches:
+      - "master"
+
+jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Lint and Vet
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest
+          args: --timeout=3m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      mysql_db:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: password
+          MYSQL_DATABASE: shipments
+          ENVIRONMENT: cicd
+        ports:
+          - 33306:3306
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Test
+        run: ENVIRONMENT=cicd make test
+
+
+  push:
+    name: Push To GCR Registry
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Push Image to GCR
+        uses: RafikFarhad/push-to-gcr-github-action@v4.1
+        with:
+          gcloud_service_key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+          registry: gcr.io
+          project_id: neurons-be-test
+          image_name: sendify-be
+          image_tag: latest
+          dockerfile: Dockerfile
+          context: .

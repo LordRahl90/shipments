@@ -1,0 +1,45 @@
+version: '3.1'
+services:
+  shipments:
+    container_name: shipments
+    image: gcr.io/neurons-be-test/shipments:latest
+    ports:
+      - 8080:8080
+    environment:
+      ENVIRONMENT: "docker"
+      DB_HOST: shipmentsdb
+      DB_PORT: 3306
+      DB_USER: zssn_user
+      DB_PASSWORD: p@azzword
+      DB_NAME: zssn
+
+    depends_on:
+      zssndb:
+        condition: service_healthy
+
+    networks:
+      - zssn
+
+
+  shipmentsdb:
+    container_name: shipments-db
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: send_user
+      MYSQL_PASSWORD: p@azzword
+      MYSQL_DATABASE: shipments
+
+    networks:
+      - shipments
+
+    healthcheck: # check the healthiness with the following configuration
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '--user=zssn_user', '--password=p@azzword']
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+networks:
+  shipments:
+    driver: bridge
+    
