@@ -93,6 +93,7 @@ func createShipment(ctx *gin.Context) {
 		Success:    true,
 		Reference:  shipment.ID,
 		CustomerID: cust.ID,
+		Price:      shipment.Price,
 	}
 
 	ctx.JSON(http.StatusCreated, res)
