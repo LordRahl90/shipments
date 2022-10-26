@@ -58,3 +58,15 @@ Sample response looks like:
     }
 ]
 ```
+
+* GET `/pricing?origin=:origin&destination=:destination&weight=:weight` -> Returns the price information of the given parameter. <br />
+Sample response:
+```json
+{
+    "weight": 10,
+    "origin": "us",
+    "destination": "se",
+    "weight_category": "small",
+    "price": 250
+}
+```

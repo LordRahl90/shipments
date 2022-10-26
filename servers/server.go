@@ -2,6 +2,7 @@ package servers
 
 import (
 	"net/http"
+	"shipments/domains/core"
 	"shipments/domains/customers"
 	"shipments/domains/customers/store"
 	"shipments/domains/entities"
@@ -39,6 +40,13 @@ func New(db *gorm.DB) (*Server, error) {
 	customerService = customers.New(custStore)
 	shipmentService = shipments.New(shipStore)
 
+	router.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
+			"message": "Welcome to Shipments API service",
+			"docs":    "https://www.getpostman.com/collections/497742b6deae56e91248",
+		})
+	})
+
 	router.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"message": "pong",
@@ -46,10 +54,40 @@ func New(db *gorm.DB) (*Server, error) {
 	})
 	router.POST("/new", createShipment)
 	router.GET("/history/:email", shipmentHistory)
+	router.GET("/pricing", pricingDetails)
 	return &Server{
 		DB:     db,
 		Router: router,
 	}, nil
+}
+
+func pricingDetails(ctx *gin.Context) {
+	var p requests.Pricing
+	if err := ctx.ShouldBind(&p); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	res, err := core.PriceFromSize(p.Weight, p.Origin, p.Destination)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	result := &responses.Pricing{
+		Weight:         p.Weight,
+		Origin:         p.Origin,
+		Destination:    p.Destination,
+		WeightCategory: core.WeightFromSize(p.Weight).String(),
+		Price:          res,
+	}
+	ctx.JSON(http.StatusOK, result)
 }
 
 func createShipment(ctx *gin.Context) {

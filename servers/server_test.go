@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -177,6 +178,33 @@ func TestGetHistoryWithUserWithNoShipment(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &shipments)
 	require.NoError(t, err)
 	require.Len(t, shipments, 0)
+}
+
+func TestPricingDetails(t *testing.T) {
+	origin, dest := "us", "se"
+	weight := 45.0
+	path := fmt.Sprintf("/pricing?origin=%s&destination=%s&weight=%.2f", origin, dest, weight)
+
+	w := handleRequest(t, http.MethodGet, path, nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	var res responses.Pricing
+
+	err := json.Unmarshal(w.Body.Bytes(), &res)
+	require.NoError(t, err)
+	assert.Equal(t, origin, res.Origin)
+	assert.Equal(t, dest, res.Destination)
+	assert.Equal(t, "large", res.WeightCategory)
+	assert.Equal(t, float64(weight), res.Weight)
+	assert.Equal(t, float64(1250), res.Price)
+}
+
+func TestPricingDetailsWithInvalidCountry(t *testing.T) {
+	origin, dest := "us", ""
+	weight := 45.0
+	path := fmt.Sprintf("/pricing?origin=%s&destination=%s&weight=%.2f", origin, dest, weight)
+
+	w := handleRequest(t, http.MethodGet, path, nil)
+	require.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func handleRequest(t *testing.T, method, path string, payload []byte) *httptest.ResponseRecorder {
