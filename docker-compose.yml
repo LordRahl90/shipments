@@ -9,16 +9,16 @@ services:
       ENVIRONMENT: "docker"
       DB_HOST: shipmentsdb
       DB_PORT: 3306
-      DB_USER: zssn_user
+      DB_USER: send_user
       DB_PASSWORD: p@azzword
-      DB_NAME: zssn
+      DB_NAME: shipments
 
     depends_on:
       zssndb:
         condition: service_healthy
 
     networks:
-      - zssn
+      - shipments
 
 
   shipmentsdb:
