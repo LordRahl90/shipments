@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"testing"
+
 	"shipments/domains/entities"
 	"shipments/requests"
 	"shipments/responses"
-	"testing"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
