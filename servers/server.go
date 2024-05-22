@@ -2,6 +2,7 @@ package servers
 
 import (
 	"net/http"
+
 	"shipments/domains/core"
 	"shipments/domains/customers"
 	"shipments/domains/customers/store"
@@ -28,7 +29,8 @@ type Server struct {
 
 // New returns a new server implementation
 func New(db *gorm.DB) (*Server, error) {
-	router := gin.Default()
+	router := gin.New()
+	router.Use(DefaultStructuredLogger())
 	custStore, err := store.New(db)
 	if err != nil {
 		return nil, err

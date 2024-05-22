@@ -9,10 +9,10 @@ test:
 	@go test ./... --cover
 
 build-image:
-	@docker build -t gcr.io/neurons-be-test/shipments:latest .
+	@docker build -t lordrahl/shipments:latest .
 
 push-image:
-	@docker push gcr.io/neurons-be-test/shipments:latest
+	@docker push lordrahl/shipments:latest
 
 bi: build-image
 pi: push-image

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: shipment
+    labels:
+        app: shipment
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: shipment
+    template:
+        metadata:
+            labels:
+                app: shipment
+        spec:
+            containers:
+                - name: shipment
+                  image: lordrahl/shipments
+                  imagePullPolicy: Always
+                  envFrom:
+                      - configMapRef:
+                            name: shipment
+                      - secretRef:
+                            name: shipment
+                  ports:
+                    - containerPort: 8080
+                      name: http
