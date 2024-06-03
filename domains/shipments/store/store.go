@@ -3,7 +3,10 @@ package store
 import (
 	"context"
 
+	"shipments/domains/tracing"
+
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 )
 
@@ -26,21 +29,35 @@ func New(db *gorm.DB) (IShipmentStore, error) {
 
 // Create implements IShipmentStore
 func (ss *ShipmentStore) Create(ctx context.Context, s *Shipment) error {
+	ctx, span := tracing.Tracer().Start(ctx, "db:CreateShipment")
+	defer span.End()
 	s.ID = uuid.NewString()
-	return ss.DB.Create(s).Error
+	return ss.DB.WithContext(ctx).Create(s).Error
 }
 
-// Details implements IShipmentStore
+// Find implements IShipmentStore
 func (ss *ShipmentStore) Find(ctx context.Context, id string) (*Shipment, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "db:FindShipment")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "shipment_id",
+		Value: attribute.StringValue(id),
+	})
+	defer span.End()
 	var s *Shipment
-	err := ss.DB.Where("id = ?", id).First(&s).Error
+	err := ss.DB.WithContext(ctx).Where("id = ?", id).First(&s).Error
 	return s, err
 }
 
 // FindCustomerShipments returns all the shipments for a customer.
 // TODO: This should be paginated for scale
 func (ss *ShipmentStore) FindCustomerShipments(ctx context.Context, customerID string) ([]*Shipment, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "db:FindCustomerShipments")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "customer_id",
+		Value: attribute.StringValue(customerID),
+	})
+	defer span.End()
 	var s []*Shipment
-	err := ss.DB.Where("customer_id = ?", customerID).Find(&s).Error
+	err := ss.DB.WithContext(ctx).Where("customer_id = ?", customerID).Find(&s).Error
 	return s, err
 }

@@ -5,6 +5,8 @@ metadata:
     labels:
         app: shipment
 data:
+    ENVIRONMENT: "demo"
     DB_HOST: "mysql"
     DB_PORT: "3306"
     DB_NAME: "shipments"
+    OTLP_ENDPOINT: "my-tempo.loki.svc.cluster.local:4318"

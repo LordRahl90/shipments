@@ -24,7 +24,7 @@ func New(store store.IShipmentStore) IShipmentService {
 
 // Create creates a new shipment record
 func (ss *ShipmentService) Create(ctx context.Context, s *entities.Shipment) error {
-	p, err := core.PriceFromSize(s.Weight, s.Origin, s.Destination)
+	p, err := core.PriceFromSize(ctx, s.Weight, s.Origin, s.Destination)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/attribute"
+	"shipments/domains/tracing"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -28,19 +30,35 @@ func New(db *gorm.DB) (ICustomerStore, error) {
 
 // Create implements ICustomerStore
 func (cs *CustomerStore) Create(ctx context.Context, c *Customer) error {
+	ctx, span := tracing.Tracer().Start(ctx, "db:CreateCustomer")
+	defer span.End()
+
 	c.ID = uuid.NewString()
-	return cs.DB.Create(c).Error
+	return cs.DB.WithContext(ctx).Create(c).Error
 }
 
 // Find implements finds a user by the given ID
 func (cs *CustomerStore) Find(ctx context.Context, id string) (*Customer, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "db:FindCustomer")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "customer_id",
+		Value: attribute.StringValue(id),
+	})
+	defer span.End()
 	var c *Customer
-	err := cs.DB.Where("id = ?", id).First(&c).Error
+	err := cs.DB.WithContext(ctx).Where("id = ?", id).First(&c).Error
 	return c, err
 }
 
 // FindByEmail finds a user by the email
 func (cs *CustomerStore) FindByEmail(ctx context.Context, email string) (*Customer, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "db:FindCustomerByEmail")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "customer_email",
+		Value: attribute.StringValue(email),
+	})
+	defer span.End()
+
 	var c *Customer
 	err := cs.DB.Where("email = ?", email).First(&c).Error
 	return c, err
@@ -48,5 +66,7 @@ func (cs *CustomerStore) FindByEmail(ctx context.Context, email string) (*Custom
 
 // Update updates a customer's information, name mainly.
 func (cs *CustomerStore) Update(ctx context.Context, c *Customer) error {
-	return cs.DB.Table("customers").Where("id = ?", c.ID).Update("name", c.Name).Error
+	ctx, span := tracing.Tracer().Start(ctx, "db:UpdateCustomer")
+	defer span.End()
+	return cs.DB.WithContext(ctx).Table("customers").Where("id = ?", c.ID).Update("name", c.Name).Error
 }

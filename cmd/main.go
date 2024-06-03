@@ -1,13 +1,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
+
+	"shipments/domains/tracing"
 	"shipments/servers"
+
+	"go.opentelemetry.io/otel"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+)
+
+var (
+	otelEndpoint string
 )
 
 func main() {
@@ -20,8 +30,29 @@ func main() {
 
 	db, err := setupDB()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
+
+	otelEndpoint = os.Getenv("OTLP_ENDPOINT")
+	if otelEndpoint == "" {
+		log.Fatal("OTLP Endpoint not set")
+	}
+
+	//exp, err := tracing.ConsoleExporter()
+	exp, err := tracing.TempoExporter(context.Background(), otelEndpoint)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tp := tracing.TraceProvider(exp)
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	otel.SetTracerProvider(tp)
+
 	server, err := servers.New(db)
 	if err != nil {
 		panic(err)

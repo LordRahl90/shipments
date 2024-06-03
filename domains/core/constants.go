@@ -1,16 +1,20 @@
 package core
 
 import (
+	"context"
 	"fmt"
 
+	"shipments/domains/tracing"
+
 	"github.com/pariz/gountries"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // Weight special type created for items
 type Weight int
 
 const (
-	// ItemUnknown unknown item
+	// WeightUnknown unknown item
 	WeightUnknown Weight = iota
 	// WeightSmall small weight
 	WeightSmall
@@ -86,7 +90,12 @@ func WeightFromSize(size float64) Weight {
 }
 
 // Multiplier defines the price multiplier based on the destination country
-func Multiplier(origin, destination string) (float64, error) {
+func Multiplier(ctx context.Context, origin, destination string) (float64, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "core:multiplier")
+	span.SetAttributes(attribute.KeyValue{Key: "origin", Value: attribute.StringValue(origin)})
+	span.SetAttributes(attribute.KeyValue{Key: "destination", Value: attribute.StringValue(destination)})
+	defer span.End()
+
 	if origin == local && destination == local {
 		return 1.0, nil
 	}
@@ -115,14 +124,19 @@ func isInEU(countryCode string) (bool, error) {
 	return country.EuMember, nil
 }
 
-// Price returns the total price based on the size and destination
-func PriceFromSize(size float64, origin, destination string) (float64, error) {
+// PriceFromSize returns the total price based on the size and destination
+func PriceFromSize(ctx context.Context, size float64, origin, destination string) (float64, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "core:price-from-size")
+	span.SetAttributes(attribute.KeyValue{Key: "weight", Value: attribute.StringValue(fmt.Sprintf("%f", size))})
+	span.SetAttributes(attribute.KeyValue{Key: "origin", Value: attribute.StringValue(origin)})
+	span.SetAttributes(attribute.KeyValue{Key: "destination", Value: attribute.StringValue(destination)})
+	defer span.End()
 	w := WeightFromSize(size)
 	p, ok := WeightPrices[w]
 	if !ok {
 		return 0, fmt.Errorf("weight price not defined %s", w.String())
 	}
-	m, err := Multiplier(origin, destination)
+	m, err := Multiplier(ctx, origin, destination)
 	if err != nil {
 		return 0, err
 	}
@@ -131,12 +145,18 @@ func PriceFromSize(size float64, origin, destination string) (float64, error) {
 }
 
 // PriceFromWeight return the price from a given weight and destination country.
-func PriceFromWeight(w Weight, origin, destination string) (float64, error) {
+func PriceFromWeight(ctx context.Context, w Weight, origin, destination string) (float64, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "core:price-from-weight")
+	span.SetAttributes(attribute.KeyValue{Key: "weight", Value: attribute.StringValue(w.String())})
+	span.SetAttributes(attribute.KeyValue{Key: "origin", Value: attribute.StringValue(origin)})
+	span.SetAttributes(attribute.KeyValue{Key: "destination", Value: attribute.StringValue(destination)})
+	defer span.End()
+
 	p, ok := WeightPrices[w]
 	if !ok {
 		return 0, fmt.Errorf("weight price not defined %s", w.String())
 	}
-	m, err := Multiplier(origin, destination)
+	m, err := Multiplier(ctx, origin, destination)
 	if err != nil {
 		return 0, err
 	}

@@ -1,9 +1,13 @@
 package servers
 
 import (
+	"fmt"
+	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 	"os"
 	"time"
+
+	"shipments/domains/tracing"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,10 +21,16 @@ func DefaultStructuredLogger() gin.HandlerFunc {
 // StructuredLogger logs a HTTP request in a specific format
 func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
+
+		tracer := tracing.Tracer()
+		if tracer == nil {
+			slog.Error("tracing not initialized")
+			c.Next()
+			return
+		}
 
 		// Process request
 		c.Next()
@@ -44,6 +54,9 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 		}
 		param.Path = path
 
+		//trace.SpanFromContext(c.Request.Context())
+		fmt.Printf("Span: %v\n", trace.SpanFromContext(c.Request.Context()))
+
 		logger.Info(
 			"incoming request",
 			"client_ip", param.ClientIP,
@@ -52,7 +65,10 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 			"body_size", param.BodySize,
 			"path", param.Path,
 			"status", param.StatusCode,
+			"trace_id", trace.SpanFromContext(c.Request.Context()).SpanContext().TraceID().String(), //tracing.TraceID(c.Request.Context()),
 			"user_agent", c.Request.UserAgent(),
 		)
 	}
 }
+
+//uptrace.TraceURL(trace.SpanFromContext(c.Request.Context())))

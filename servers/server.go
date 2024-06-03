@@ -1,6 +1,8 @@
 package servers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"shipments/domains/core"
@@ -9,10 +11,12 @@ import (
 	"shipments/domains/entities"
 	"shipments/domains/shipments"
 	cStore "shipments/domains/shipments/store"
+	"shipments/domains/tracing"
 	"shipments/requests"
 	"shipments/responses"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"gorm.io/gorm"
 )
 
@@ -30,7 +34,8 @@ type Server struct {
 // New returns a new server implementation
 func New(db *gorm.DB) (*Server, error) {
 	router := gin.New()
-	router.Use(DefaultStructuredLogger())
+	router.Use(DefaultStructuredLogger(),
+		otelgin.Middleware("shipments"))
 	custStore, err := store.New(db)
 	if err != nil {
 		return nil, err
@@ -43,17 +48,15 @@ func New(db *gorm.DB) (*Server, error) {
 	shipmentService = shipments.New(shipStore)
 
 	router.GET("/", func(ctx *gin.Context) {
+		_, span := tracing.Tracer().Start(ctx.Request.Context(), "Welcome")
+		defer span.End()
+		fmt.Printf("\n\nID: %s\n\n", span.SpanContext().TraceID().String())
 		ctx.JSON(200, gin.H{
 			"message": "Welcome to Shipments API service",
 			"docs":    "https://www.getpostman.com/collections/497742b6deae56e91248",
 		})
 	})
 
-	router.GET("/ping", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
 	router.POST("/new", createShipment)
 	router.GET("/history/:email", shipmentHistory)
 	router.GET("/pricing", pricingDetails)
@@ -64,6 +67,9 @@ func New(db *gorm.DB) (*Server, error) {
 }
 
 func pricingDetails(ctx *gin.Context) {
+	traceCtx, span := tracing.Tracer().Start(ctx.Request.Context(), "Pricing Details")
+	defer span.End()
+
 	var p requests.Pricing
 	if err := ctx.ShouldBind(&p); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -73,7 +79,7 @@ func pricingDetails(ctx *gin.Context) {
 		return
 	}
 
-	res, err := core.PriceFromSize(p.Weight, p.Origin, p.Destination)
+	res, err := core.PriceFromSize(traceCtx, p.Weight, p.Origin, p.Destination)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -93,8 +99,11 @@ func pricingDetails(ctx *gin.Context) {
 }
 
 func createShipment(ctx *gin.Context) {
+	traceCtx, span := tracing.Tracer().Start(ctx.Request.Context(), "Create Shipment")
+	defer span.End()
 	var req requests.Shipment
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		span.RecordError(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   err.Error(),
@@ -106,8 +115,9 @@ func createShipment(ctx *gin.Context) {
 		Name:  req.Name,
 		Email: req.Email,
 	}
-	err := customerService.FindOrCreate(ctx, cust)
+	err := customerService.FindOrCreate(traceCtx, cust)
 	if err != nil {
+		span.RecordError(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   err.Error(),
@@ -123,6 +133,7 @@ func createShipment(ctx *gin.Context) {
 
 	err = shipmentService.Create(ctx, shipment)
 	if err != nil {
+		span.RecordError(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   err.Error(),
@@ -140,24 +151,29 @@ func createShipment(ctx *gin.Context) {
 }
 
 func shipmentHistory(ctx *gin.Context) {
+	traceCtx, span := tracing.Tracer().Start(ctx.Request.Context(), "Shipment History")
+	defer span.End()
 	email := ctx.Param("email")
 	if email == "" {
+		span.RecordError(errors.New("invalid email provided"))
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "invalid email provided",
 		})
 		return
 	}
-	cust, err := customerService.FindByEmail(ctx, email)
+	cust, err := customerService.FindByEmail(traceCtx, email)
 	if err != nil {
+		span.RecordError(err)
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   err.Error(),
 		})
 		return
 	}
-	res, err := shipmentService.FindCustomerShipments(ctx, cust.ID)
+	res, err := shipmentService.FindCustomerShipments(traceCtx, cust.ID)
 	if err != nil {
+		span.RecordError(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   err.Error(),

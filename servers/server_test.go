@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -35,7 +36,7 @@ func TestMain(m *testing.M) {
 
 	d, err := setupTestDB()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	db = d
 	svr, err := New(db)
@@ -228,7 +229,7 @@ func handleRequest(t *testing.T, method, path string, payload []byte) *httptest.
 
 func setupTestDB() (*gorm.DB, error) {
 	env := os.Getenv("ENVIRONMENT")
-	dsn := "root:@tcp(127.0.0.1:3306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:password@tcp(127.0.0.1:3306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
 	if env == "cicd" {
 		dsn = "test_user:password@tcp(127.0.0.1:33306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
 	}

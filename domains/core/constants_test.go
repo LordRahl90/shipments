@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -204,7 +205,7 @@ func TestPriceFromSize(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := PriceFromSize(tt.size, tt.origin, tt.dest)
+			got, err := PriceFromSize(context.TODO(), tt.size, tt.origin, tt.dest)
 			if tt.expErr {
 				require.EqualError(t, err, tt.errMsg)
 			} else {
@@ -295,7 +296,7 @@ func TestPriceFromWeight(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := PriceFromWeight(tt.weight, tt.origin, tt.dest)
+			got, err := PriceFromWeight(context.TODO(), tt.weight, tt.origin, tt.dest)
 			if tt.expErr {
 				require.EqualError(t, err, tt.errMsg)
 			} else {
