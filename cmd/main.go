@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"shipments/domains/tracing"
@@ -11,6 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -21,6 +23,9 @@ var (
 )
 
 func main() {
+	gin.SetMode(gin.ReleaseMode)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.Info("starting server")
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" || env == "development" {
 		if err := godotenv.Load(".envs/.env"); err != nil {
@@ -58,9 +63,8 @@ func main() {
 		panic(err)
 	}
 
-	if err := server.Router.Run("0.0.0.0:8080"); err != nil {
-		panic(err)
-	}
+	slog.Info("server started at port 8080")
+	log.Fatal(server.Router.Run("0.0.0.0:8080"))
 }
 
 func setupDB() (*gorm.DB, error) {

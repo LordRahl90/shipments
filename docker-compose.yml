@@ -12,6 +12,7 @@ services:
       DB_USER: send_user
       DB_PASSWORD: p@azzword
       DB_NAME: shipments
+      OTLP_ENDPOINT: tempo:4318
 
     depends_on:
       shipmentsdb:
@@ -20,10 +21,10 @@ services:
     networks:
       - shipments
 
-
   shipmentsdb:
     container_name: shipments-db
-    image: mysql:latest
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_USER: send_user
@@ -41,6 +42,7 @@ services:
 
   loki:
     image: grafana/loki:latest
+    container_name: shipments-loki
     ports:
       - "3100:3100"
     networks:
@@ -48,15 +50,15 @@ services:
 
   promtail:
     image: grafana/promtail:latest
-    volumes:
-      - ./deployments/loki/config.yml:/etc/promtail/promtail-config.yaml
+    container_name: shipments-promtail
     networks:
       - shipments
     depends_on:
       - loki
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.0.0
+    container_name: shipments-grafana
     ports:
       - "3000:3000"
     environment:
@@ -65,6 +67,49 @@ services:
       - shipments
     depends_on:
       - loki
+      - tempo
+
+  init:
+    image: &tempoImage grafana/tempo:latest
+    user: root
+    entrypoint:
+      - "chown"
+      - "10001:10001"
+      - "/var/tempo"
+    volumes:
+      - tempo-data:/var/tempo
+
+  tempo:
+    image: *tempoImage
+    container_name: shipments-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yaml
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"   # tempo
+      - "9095:9095" # tempo grpc
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+
+    depends_on:
+      - init
+
+    networks:
+        - shipments
+
+volumes:
+  shipmentsdb_data:
+    driver: local
+
+  loki_data:
+    driver: local
+
+  promtail_data:
+    driver: local
+
+  tempo-data:
+    driver: local
 
 networks:
   shipments:

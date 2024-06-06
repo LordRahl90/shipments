@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go.opentelemetry.io/otel/trace"
 	"log/slog"
-	"os"
 	"time"
 
 	"shipments/domains/tracing"
@@ -14,8 +13,7 @@ import (
 
 // DefaultStructuredLogger logs a gin HTTP request in a json format using zerolog
 func DefaultStructuredLogger() gin.HandlerFunc {
-	jsonLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	return StructuredLogger(jsonLogger)
+	return StructuredLogger(slog.Default())
 }
 
 // StructuredLogger logs a HTTP request in a specific format
