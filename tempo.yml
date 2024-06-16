@@ -16,6 +16,7 @@ distributor:
       protocols:
         http:
         grpc:
+    zipkin:
     opencensus:
 
 ingester:
