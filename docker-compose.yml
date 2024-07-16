@@ -1,7 +1,12 @@
-version: '3.1'
+version: '3.7'
+x-logging: &loki-logging
+  driver: json-file
+  options:
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 services:
   shipments:
     container_name: shipments
+    logging: *loki-logging
     build: .
     ports:
       - '8080:8080'
@@ -25,6 +30,7 @@ services:
     container_name: shipments-db
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
+    logging: *loki-logging
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_USER: send_user
@@ -43,6 +49,10 @@ services:
   loki:
     image: grafana/loki:latest
     container_name: shipments-loki
+    command: -config.file=/mnt/config/loki-config.yaml
+    logging: *loki-logging
+    volumes:
+      - ./loki/loki-config.yaml:/mnt/config/loki-config.yaml
     ports:
       - "3100:3100"
     networks:
@@ -51,14 +61,20 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: shipments-promtail
+    volumes:
+      - ./loki/promtail-config.yaml:/mnt/config/promtail-config.yaml
+      - /var/lib/docker/containers:/host/containers
+    command: -config.file /mnt/config/promtail-config.yaml
+    logging: *loki-logging
     networks:
       - shipments
     depends_on:
       - loki
 
   grafana:
-    image: grafana/grafana:11.0.0
+    image: grafana/grafana:latest
     container_name: shipments-grafana
+    logging: *loki-logging
     ports:
       - "3000:3000"
     environment:
@@ -67,7 +83,8 @@ services:
       - shipments
     depends_on:
       - loki
-      - tempo
+      - promtail
+#      - tempo
 
   init:
     image: &tempoImage grafana/tempo:latest
@@ -82,6 +99,7 @@ services:
   tempo:
     image: *tempoImage
     container_name: shipments-tempo
+    logging: *loki-logging
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
       - ./tempo.yml:/etc/tempo.yaml
