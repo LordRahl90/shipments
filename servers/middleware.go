@@ -51,9 +51,6 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 		}
 		param.Path = path
 
-		//trace.SpanFromContext(c.Request.Context())
-		//fmt.Printf("\n\nID: %s\n\n", //span.SpanContext().TraceID().String())
-
 		logger.Info(
 			"incoming request",
 			"client_ip", param.ClientIP,
