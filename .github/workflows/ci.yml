@@ -55,7 +55,6 @@ jobs:
     needs:
       - lint
       - test
-      - test-with-race
     steps:
       - name: 'Checkout The code'
         uses: actions/checkout@master
