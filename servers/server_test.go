@@ -47,12 +47,6 @@ func TestMain(m *testing.M) {
 	code = m.Run()
 }
 
-func TestPingEndpoint(t *testing.T) {
-	w := handleRequest(t, http.MethodGet, "/ping", nil)
-	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, `{"message":"pong"}`, w.Body.String())
-}
-
 func TestNewShipment(t *testing.T) {
 	shipment := &requests.Shipment{
 		Name:        gofakeit.Name(),

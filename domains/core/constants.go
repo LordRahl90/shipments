@@ -91,7 +91,7 @@ func WeightFromSize(size float64) Weight {
 
 // Multiplier defines the price multiplier based on the destination country
 func Multiplier(ctx context.Context, origin, destination string) (float64, error) {
-	ctx, span := tracing.Tracer().Start(ctx, "core:multiplier")
+	_, span := tracing.Tracer().Start(ctx, "core:multiplier")
 	span.SetAttributes(attribute.KeyValue{Key: "origin", Value: attribute.StringValue(origin)})
 	span.SetAttributes(attribute.KeyValue{Key: "destination", Value: attribute.StringValue(destination)})
 	defer span.End()

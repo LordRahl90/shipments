@@ -2,10 +2,11 @@ package store
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/attribute"
+
 	"shipments/domains/tracing"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 )
 
@@ -60,7 +61,7 @@ func (cs *CustomerStore) FindByEmail(ctx context.Context, email string) (*Custom
 	defer span.End()
 
 	var c *Customer
-	err := cs.DB.Where("email = ?", email).First(&c).Error
+	err := cs.DB.WithContext(ctx).Where("email = ?", email).First(&c).Error
 	return c, err
 }
 
