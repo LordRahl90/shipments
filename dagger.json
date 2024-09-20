@@ -1,6 +1,12 @@
 {
   "name": "shipments",
   "sdk": "go",
+  "dependencies": [
+    {
+      "name": "testcontainers",
+      "source": "github.com/vito/daggerverse/testcontainers@a1647750b3ef09b83091b40185f498bb995ed540"
+    }
+  ],
   "source": "dagger",
   "engineVersion": "v0.13.1"
 }

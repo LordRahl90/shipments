@@ -10,6 +10,9 @@ type Shipments struct{}
 
 // Test initializes the test
 func (m *Shipments) Test(ctx context.Context, source *dagger.Directory) (string, error) {
+	if _, err := dag.Testcontainers().DockerService().Start(ctx); err != nil {
+		return "", err
+	}
 	//mysql := dag.Container().
 	//	From("mysql:8.0").
 	//	WithExposedPort(3306)
@@ -24,5 +27,6 @@ func (m *Shipments) BuildEnv(source *dagger.Directory) *dagger.Container {
 		From("golang:latest").
 		WithDirectory("/src", source).
 		WithWorkdir("/src").
-		WithExec([]string{"ls", "-al"})
+		WithExec([]string{"ls", "-al"}).
+		With(dag.Testcontainers().Setup)
 }
