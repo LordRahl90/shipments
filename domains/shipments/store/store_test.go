@@ -2,25 +2,32 @@ package store
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
+
+	"shipments/testhelpers"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var (
 	db    *gorm.DB
 	store IShipmentStore
+
+	container = testhelpers.GetMySQLContainer(context.TODO())
 )
 
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		cleanup()
+		if err := container.Terminate(context.TODO()); err != nil {
+			log.Fatal(err)
+		}
 		os.Exit(code)
 	}()
 	d, err := setupTestDB()
@@ -104,12 +111,7 @@ func newShipment(t *testing.T, customerID string) *Shipment {
 }
 
 func setupTestDB() (*gorm.DB, error) {
-	env := os.Getenv("ENVIRONMENT")
-	dsn := "root:password@tcp(127.0.0.1:3306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	if env == "cicd" {
-		dsn = "test_user:password@tcp(127.0.0.1:33306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	}
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	return testhelpers.SetupTestDB(context.TODO(), container)
 }
 
 func cleanup() {

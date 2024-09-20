@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"shipments/testhelpers"
 	"testing"
 
 	"shipments/domains/entities"
@@ -18,19 +19,23 @@ import (
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var (
 	db     *gorm.DB
 	server *Server
+
+	container = testhelpers.GetMySQLContainer(context.TODO())
 )
 
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		cleanup()
+		if err := container.Terminate(context.TODO()); err != nil {
+			log.Fatal(err)
+		}
 		os.Exit(code)
 	}()
 
@@ -222,12 +227,7 @@ func handleRequest(t *testing.T, method, path string, payload []byte) *httptest.
 }
 
 func setupTestDB() (*gorm.DB, error) {
-	env := os.Getenv("ENVIRONMENT")
-	dsn := "root:password@tcp(127.0.0.1:3306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	if env == "cicd" {
-		dsn = "test_user:password@tcp(127.0.0.1:33306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	}
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	return testhelpers.SetupTestDB(context.TODO(), container)
 }
 
 func cleanup() {

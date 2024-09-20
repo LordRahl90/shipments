@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateCustomer(t *testing.T) {
-	store := &MockCustomerStore{
+	mockCustomerStore := &MockCustomerStore{
 		CreateFunc: func(ctx context.Context, c *store.Customer) error {
 			c.ID = uuid.NewString()
 			mockDB[c.ID] = c
@@ -35,7 +35,7 @@ func TestCreateCustomer(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	svc := New(store)
+	svc := New(mockCustomerStore)
 	c := &entities.Customer{
 		Name:  gofakeit.FirstName(),
 		Email: gofakeit.Email(),
@@ -47,7 +47,7 @@ func TestCreateCustomer(t *testing.T) {
 }
 
 func TestCreateCustomerNoEmail(t *testing.T) {
-	store := &MockCustomerStore{
+	mockStore := &MockCustomerStore{
 		CreateFunc: func(ctx context.Context, c *store.Customer) error {
 			c.ID = uuid.NewString()
 			mockDB[c.ID] = c
@@ -55,7 +55,7 @@ func TestCreateCustomerNoEmail(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	svc := New(store)
+	svc := New(mockStore)
 	c := &entities.Customer{
 		Name: gofakeit.LastName(),
 	}

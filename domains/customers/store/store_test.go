@@ -2,36 +2,43 @@ package store
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
+
+	"shipments/testhelpers"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 var (
 	db      *gorm.DB
 	storage ICustomerStore
+
+	container = testhelpers.GetMySQLContainer(context.TODO())
 )
 
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		cleanup()
+		if err := container.Terminate(context.TODO()); err != nil {
+			log.Fatalf("cannot stop container %s", err)
+		}
 		os.Exit(code)
 	}()
-	d, err := setupTestDB()
+	d, err := setupTestDB(context.TODO())
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	db = d
 	s, err := New(db)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	storage = s
 	code = m.Run()
@@ -40,7 +47,9 @@ func TestMain(m *testing.M) {
 func TestCreateCustomer(t *testing.T) {
 	ctx := context.Background()
 	c := newCustomer(t)
-	require.NoError(t, storage.Create(ctx, c))
+	st, err := New(db)
+	require.NoError(t, err)
+	require.NoError(t, st.Create(ctx, c))
 	require.NotEmpty(t, c.ID)
 }
 
@@ -127,13 +136,8 @@ func newCustomer(t *testing.T) *Customer {
 	}
 }
 
-func setupTestDB() (*gorm.DB, error) {
-	env := os.Getenv("ENVIRONMENT")
-	dsn := "root:password@tcp(127.0.0.1:3306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	if env == "cicd" {
-		dsn = "test_user:password@tcp(127.0.0.1:33306)/shipments?charset=utf8mb4&parseTime=True&loc=Local"
-	}
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func setupTestDB(ctx context.Context) (*gorm.DB, error) {
+	return testhelpers.SetupTestDB(ctx, container)
 }
 
 func cleanup() {

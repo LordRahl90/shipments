@@ -14,5 +14,12 @@ build-image:
 push-image:
 	@docker push lordrahl/shipments:latest
 
+dagger-build-env:
+	dagger call build-env --source=. --verbose
+
+dagger-test:
+	dagger call test --source=. --verbose
+
 bi: build-image
 pi: push-image
+dt: dagger-test
