@@ -11,7 +11,11 @@ import (
 	"github.com/cucumber/godog"
 )
 
-type ctxResult float64
+type (
+	ctxResult float64
+
+	ctxKey string
+)
 
 var (
 	req requests.Pricing
@@ -35,11 +39,11 @@ func action(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	return context.WithValue(ctx, "result", ctxResult(result)), nil
+	return context.WithValue(ctx, ctxKey("result"), ctxResult(result)), nil
 }
 
 func assert(ctx context.Context, expected float64) (context.Context, error) {
-	result := ctx.Value("result").(ctxResult)
+	result := ctx.Value(ctxKey("result")).(ctxResult)
 	if float64(result) != expected {
 		return ctx, fmt.Errorf("expected %f, got %f", expected, result)
 	}

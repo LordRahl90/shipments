@@ -17,7 +17,11 @@ import (
 	"github.com/cucumber/godog"
 )
 
-type responseString string
+type (
+	responseString string
+
+	ctxKey string
+)
 
 var (
 	//req requests.Shipment
@@ -77,11 +81,11 @@ func action(ctx context.Context, country, destination string, weight float64) (c
 
 	response := w.Body.String()
 
-	return context.WithValue(ctx, "result", responseString(response)), nil
+	return context.WithValue(ctx, ctxKey("result"), responseString(response)), nil
 }
 
 func assert(ctx context.Context, expected float64) (context.Context, error) {
-	result := ctx.Value("result").(responseString)
+	result := ctx.Value(ctxKey("result")).(responseString)
 	var res responses.Shipment
 	if err := json.Unmarshal([]byte(result), &res); err != nil {
 		return ctx, err
@@ -94,7 +98,7 @@ func assert(ctx context.Context, expected float64) (context.Context, error) {
 }
 
 func nonEmptyReference(ctx context.Context) (context.Context, error) {
-	result, ok := ctx.Value("result").(responseString)
+	result, ok := ctx.Value(ctxKey("result")).(responseString)
 	if !ok {
 		return ctx, fmt.Errorf("empty result")
 	}
