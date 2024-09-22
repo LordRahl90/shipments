@@ -11,6 +11,7 @@ import (
 	"shipments/responses"
 	"shipments/servers"
 	"shipments/testhelpers"
+	requests2 "shipments/testhelpers/requests"
 	"testing"
 )
 
@@ -65,7 +66,7 @@ func action(ctx context.Context, country, destination string, weight float64) (c
 
 	fmt.Printf("\n\nRequesting %s\n\n", b)
 
-	w, err := testhelpers.NewRequest(svr, http.MethodPost, path, b)
+	w, err := requests2.NewRequest(svr, http.MethodPost, path, b)
 	if err != nil {
 		return ctx, err
 	}

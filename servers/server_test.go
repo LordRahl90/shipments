@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"shipments/testhelpers"
 	"testing"
 
 	"shipments/domains/entities"
 	"shipments/requests"
 	"shipments/responses"
+	"shipments/testhelpers"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
