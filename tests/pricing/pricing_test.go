@@ -3,10 +3,12 @@ package pricing
 import (
 	"context"
 	"fmt"
-	"github.com/cucumber/godog"
+	"testing"
+
 	"shipments/domains/core"
 	"shipments/requests"
-	"testing"
+
+	"github.com/cucumber/godog"
 )
 
 var (
