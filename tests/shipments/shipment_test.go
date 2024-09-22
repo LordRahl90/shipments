@@ -4,16 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cucumber/godog"
 	"log"
 	"net/http"
+	"testing"
+
 	"shipments/requests"
 	"shipments/responses"
 	"shipments/servers"
 	"shipments/testhelpers"
 	requests2 "shipments/testhelpers/requests"
-	"testing"
+
+	"github.com/cucumber/godog"
 )
+
+type responseString string
 
 var (
 	//req requests.Shipment
@@ -72,13 +76,12 @@ func action(ctx context.Context, country, destination string, weight float64) (c
 	}
 
 	response := w.Body.String()
-	fmt.Printf("\n\nResponse: %s\n\n", response)
 
-	return context.WithValue(ctx, "result", response), nil
+	return context.WithValue(ctx, "result", responseString(response)), nil
 }
 
 func assert(ctx context.Context, expected float64) (context.Context, error) {
-	result := ctx.Value("result").(string)
+	result := ctx.Value("result").(responseString)
 	var res responses.Shipment
 	if err := json.Unmarshal([]byte(result), &res); err != nil {
 		return ctx, err
@@ -91,7 +94,7 @@ func assert(ctx context.Context, expected float64) (context.Context, error) {
 }
 
 func nonEmptyReference(ctx context.Context) (context.Context, error) {
-	result, ok := ctx.Value("result").(string)
+	result, ok := ctx.Value("result").(responseString)
 	if !ok {
 		return ctx, fmt.Errorf("empty result")
 	}
