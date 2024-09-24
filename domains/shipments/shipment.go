@@ -2,6 +2,8 @@ package shipments
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/attribute"
+	"shipments/domains/tracing"
 
 	"shipments/domains/core"
 	"shipments/domains/entities"
@@ -24,6 +26,8 @@ func New(store store.IShipmentStore) IShipmentService {
 
 // Create creates a new shipment record
 func (ss *ShipmentService) Create(ctx context.Context, s *entities.Shipment) error {
+	ctx, span := tracing.Tracer().Start(ctx, "svc:CreateShipment")
+	defer span.End()
 	p, err := core.PriceFromSize(ctx, s.Weight, s.Origin, s.Destination)
 	if err != nil {
 		return err
@@ -39,6 +43,11 @@ func (ss *ShipmentService) Create(ctx context.Context, s *entities.Shipment) err
 
 // Find gets a single record from the store with the given ID
 func (ss *ShipmentService) Find(ctx context.Context, id string) (*entities.Shipment, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "svc:FindShipment")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "shipment_id",
+		Value: attribute.StringValue(id),
+	})
 	res, err := ss.store.Find(ctx, id)
 	if err != nil {
 		return nil, err
@@ -48,6 +57,11 @@ func (ss *ShipmentService) Find(ctx context.Context, id string) (*entities.Shipm
 
 // FindCustomerShipments finds all the customer records from the store
 func (ss *ShipmentService) FindCustomerShipments(ctx context.Context, customerID string) ([]*entities.Shipment, error) {
+	ctx, span := tracing.Tracer().Start(ctx, "svc:FindCustomerShipments")
+	span.SetAttributes(attribute.KeyValue{
+		Key:   "customer_id",
+		Value: attribute.StringValue(customerID),
+	})
 	var result []*entities.Shipment
 
 	res, err := ss.store.FindCustomerShipments(ctx, customerID)

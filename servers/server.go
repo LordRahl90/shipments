@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 )
 
@@ -152,9 +153,11 @@ func createShipment(ctx *gin.Context) {
 }
 
 func shipmentHistory(ctx *gin.Context) {
-	slog.InfoContext(ctx.Request.Context(), "shipment history")
 	traceCtx, span := tracing.Tracer().Start(ctx.Request.Context(), "Shipment History")
+	span.SetAttributes(attribute.String("email", ctx.Param("email")))
 	defer span.End()
+
+	slog.InfoContext(ctx.Request.Context(), "shipment history")
 	email := ctx.Param("email")
 	if email == "" {
 		span.RecordError(errors.New("invalid email provided"))

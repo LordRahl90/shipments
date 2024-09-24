@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"log"
 	"log/slog"
 	"os"
@@ -14,10 +15,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	slogmulti "github.com/samber/slog-multi"
-	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+)
+
+var (
+	otelLogger = otelslog.NewHandler("shipments")
+	jsonLogger = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
 )
 
 func main() {
@@ -25,9 +32,7 @@ func main() {
 	defer cancel()
 	gin.SetMode(gin.ReleaseMode)
 
-	logger := slogmulti.Fanout(otelslog.NewHandler("shipments"), slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	logger := slogmulti.Fanout(otelLogger, jsonLogger)
 	slog.SetDefault(slog.New(logger))
 
 	env := os.Getenv("ENVIRONMENT")
@@ -41,35 +46,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	lp, err := tracing.LoggerProvider(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	db, err := setupDB()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := db.Use(otelgorm.NewPlugin()); err != nil {
-		log.Fatal(err)
-	}
-
-	//otelEndpoint = os.Getenv("OTLP_ENDPOINT")
-	//if otelEndpoint == "" {
-	//	log.Fatal("OTLP Endpoint not set")
-	//}
-	//
-	////exp, err := tracing.ConsoleExporter()
-	//exp, err := tracing.TempoExporter(context.Background(), otelEndpoint)
-	//if err != nil {
+	//if err := db.Use(otelgorm.NewPlugin()); err != nil {
 	//	log.Fatal(err)
 	//}
-	//
-	//tp := tracing.TraceProvider(exp)
-	//defer func() {
-	//	if err := tp.Shutdown(context.Background()); err != nil {
-	//		log.Fatal(err)
-	//	}
-	//}()
-	//
-	//otel.SetTracerProvider(tp)
 
 	errChan := make(chan error, 1)
 
@@ -96,6 +85,11 @@ func main() {
 	if err := tp.Shutdown(context.TODO()); err != nil {
 		log.Fatal(err)
 	}
+
+	if err := lp.Shutdown(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+
 	os.Exit(0)
 }
 
