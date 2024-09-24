@@ -9,14 +9,14 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN go build -o sendify ./cmd/
+RUN go build -o shipments ./cmd/
 
 
 FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
-COPY --from=build /app/sendify sendify
+COPY --from=build /app/shipments shipments
 
 EXPOSE 8080
 
-ENTRYPOINT [ "./sendify" ]
+ENTRYPOINT [ "./shipments" ]

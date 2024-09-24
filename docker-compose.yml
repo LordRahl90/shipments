@@ -1,4 +1,3 @@
-version: '3.7'
 services:
   shipments:
     container_name: shipments
@@ -12,7 +11,9 @@ services:
       DB_USER: send_user
       DB_PASSWORD: p@azzword
       DB_NAME: shipments
-      OTLP_ENDPOINT: tempo:4318
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
 
     depends_on:
       shipmentsdb:
@@ -25,7 +26,6 @@ services:
     container_name: shipments-db
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
-    logging: *loki-logging
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_USER: send_user
@@ -43,32 +43,32 @@ services:
 
   otel-lgtm:
     image: grafana/otel-lgtm
-    container_name: otel-lgtm
+    container_name: shipment-lgtm
     ports:
       - "3000:3000"
       - "4317:4317"
       - "4318:4318"
       - "9090:9090"
     volumes:
-      - ./container/grafana:/data/grafana
-      - ./container/prometheus:/data/prometheus
-      - ./container/loki:/loki
+      - grafana:/data/grafana
+      - prom-data:/data/prometheus
+      - loki_data:/loki
     environment:
       - GF_PATHS_DATA=/data/grafana
     networks:
-      - notes
+      - shipments
 
 volumes:
   shipmentsdb_data:
     driver: local
 
+  grafana:
+    driver: local
+
   loki_data:
     driver: local
 
-  promtail_data:
-    driver: local
-
-  tempo-data:
+  prom-data:
     driver: local
 
 networks:

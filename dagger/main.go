@@ -21,6 +21,13 @@ func (m *Shipments) Test(ctx context.Context, source *dagger.Directory) (string,
 		Stdout(ctx)
 }
 
+func (m *Shipments) Lint(ctx context.Context, source *dagger.Directory) (string, error) {
+	return m.BuildEnv(source).
+		WithExec([]string{"make", "lint"}).
+		Stdout(ctx)
+
+}
+
 // BuildEnv initializes the build environment
 func (m *Shipments) BuildEnv(source *dagger.Directory) *dagger.Container {
 	return dag.Container().

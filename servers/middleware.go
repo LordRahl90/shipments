@@ -1,7 +1,6 @@
 package servers
 
 import (
-	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 	"time"
 
@@ -59,7 +58,6 @@ func StructuredLogger(logger *slog.Logger) gin.HandlerFunc {
 			"body_size", param.BodySize,
 			"path", param.Path,
 			"status", param.StatusCode,
-			"trace_id", trace.SpanFromContext(c.Request.Context()).SpanContext().TraceID().String(), //tracing.TraceID(c.Request.Context()),
 			"user_agent", c.Request.UserAgent(),
 		)
 	}

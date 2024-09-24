@@ -2,17 +2,17 @@ package tracing
 
 import (
 	"context"
-	"log"
-	"os"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
-	oteltrace "go.opentelemetry.io/otel/sdk/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
+	"os"
 )
 
 var (
@@ -28,49 +28,45 @@ func Tracer() trace.Tracer {
 	return tracer
 }
 
-// ConsoleExporter exports to console
-func ConsoleExporter() (oteltrace.SpanExporter, error) {
-	return stdouttrace.New(
-		stdouttrace.WithPrettyPrint(),
-		stdouttrace.WithoutTimestamps(),
-	)
-}
-
-// TempoExporter exports to tempo
-func TempoExporter(ctx context.Context, otelEndpoint string) (sdktrace.SpanExporter, error) {
-	opt := otlptracehttp.WithInsecure()
-	endpointOpt := otlptracehttp.WithEndpoint(otelEndpoint)
-	return otlptracehttp.New(ctx, opt, endpointOpt)
-}
-
 // TraceProvider sets the trace provider
-func TraceProvider(exp sdktrace.SpanExporter) *sdktrace.TracerProvider {
-	if provider == nil {
-		hostName, err := os.Hostname()
-		if err != nil {
-			log.Fatal(err)
-		}
-		r, err := resource.Merge(
-			resource.Default(),
-			resource.NewWithAttributes(
-				semconv.SchemaURL,
-				semconv.ServiceNameKey.String("shipments"),
-				semconv.ServiceVersionKey.String("v0.1.0"),
-				semconv.ServiceInstanceIDKey.String(hostName),
-			))
+func TraceProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	slog.InfoContext(ctx, "setting up trace provider")
+	prop := propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{})
+	otel.SetTextMapPropagator(prop)
+	slog.InfoContext(ctx, "propagator configured")
 
-		if err != nil {
-			log.Fatal(err)
-		}
-		provider = sdktrace.NewTracerProvider(
-			sdktrace.WithBatcher(exp),
-			sdktrace.WithResource(r),
-		)
+	traceExporter, err := otlptrace.New(ctx, otlptracehttp.NewClient())
+	if err != nil {
+		return nil, err
 	}
 
-	return provider
+	hostName, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := getResource(hostName)
+	if err != nil {
+		return nil, err
+	}
+
+	provider = sdktrace.NewTracerProvider(
+		sdktrace.WithResource(r),
+		sdktrace.WithBatcher(traceExporter),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	return provider, nil
 }
 
-func TraceID(ctx context.Context) trace.TraceID {
-	return trace.SpanContextFromContext(ctx).TraceID()
+func getResource(hostName string) (*resource.Resource, error) {
+	return resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			"https://opentelemetry.io/schemas/1.26.0",
+			attribute.String("service.name", "shipments"),
+			attribute.String("environment", os.Getenv("ENVIRONMENT")),
+			attribute.String("app.version", "1.0.0")),
+	)
 }

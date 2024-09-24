@@ -6,31 +6,40 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"os/signal"
 
 	"shipments/domains/tracing"
 	"shipments/servers"
 
-	"go.opentelemetry.io/otel"
-
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	slogmulti "github.com/samber/slog-multi"
+	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
-var (
-	otelEndpoint string
-)
-
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 	gin.SetMode(gin.ReleaseMode)
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-	slog.Info("starting server")
+
+	logger := slogmulti.Fanout(otelslog.NewHandler("shipments"), slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(slog.New(logger))
+
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" || env == "development" {
 		if err := godotenv.Load(".envs/.env"); err != nil {
 			panic(err)
 		}
+	}
+	slog.Info("starting server in " + env + " mode")
+	tp, err := tracing.TraceProvider(ctx)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	db, err := setupDB()
@@ -38,33 +47,56 @@ func main() {
 		log.Fatal(err)
 	}
 
-	otelEndpoint = os.Getenv("OTLP_ENDPOINT")
-	if otelEndpoint == "" {
-		log.Fatal("OTLP Endpoint not set")
+	if err := db.Use(otelgorm.NewPlugin()); err != nil {
+		log.Fatal(err)
 	}
 
-	//exp, err := tracing.ConsoleExporter()
-	exp, err := tracing.TempoExporter(context.Background(), otelEndpoint)
+	//otelEndpoint = os.Getenv("OTLP_ENDPOINT")
+	//if otelEndpoint == "" {
+	//	log.Fatal("OTLP Endpoint not set")
+	//}
+	//
+	////exp, err := tracing.ConsoleExporter()
+	//exp, err := tracing.TempoExporter(context.Background(), otelEndpoint)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//tp := tracing.TraceProvider(exp)
+	//defer func() {
+	//	if err := tp.Shutdown(context.Background()); err != nil {
+	//		log.Fatal(err)
+	//	}
+	//}()
+	//
+	//otel.SetTracerProvider(tp)
+
+	errChan := make(chan error, 1)
+
+	server, err := servers.New(db)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tp := tracing.TraceProvider(exp)
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Fatal(err)
+	go func() {
+		slog.Info("starting server on port 8080")
+		if err := server.Router.Run("0.0.0.0:8080"); err != nil {
+			errChan <- err
 		}
 	}()
 
-	otel.SetTracerProvider(tp)
-
-	server, err := servers.New(db)
-	if err != nil {
-		panic(err)
+	select {
+	case err := <-errChan:
+		log.Fatal(err)
+	case <-ctx.Done():
+		log.Println("shutting down server")
 	}
 
-	slog.Info("server started at port 8080")
-	log.Fatal(server.Router.Run("0.0.0.0:8080"))
+	slog.InfoContext(context.TODO(), "starting cleanup")
+	if err := tp.Shutdown(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+	os.Exit(0)
 }
 
 func setupDB() (*gorm.DB, error) {

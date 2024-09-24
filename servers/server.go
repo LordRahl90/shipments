@@ -3,6 +3,7 @@ package servers
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"shipments/domains/core"
@@ -151,6 +152,7 @@ func createShipment(ctx *gin.Context) {
 }
 
 func shipmentHistory(ctx *gin.Context) {
+	slog.InfoContext(ctx.Request.Context(), "shipment history")
 	traceCtx, span := tracing.Tracer().Start(ctx.Request.Context(), "Shipment History")
 	defer span.End()
 	email := ctx.Param("email")

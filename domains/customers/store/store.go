@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"shipments/domains/tracing"
 
@@ -22,6 +23,7 @@ type CustomerStore struct {
 // New returns a new instance of CustomerStore
 func New(db *gorm.DB) (ICustomerStore, error) {
 	if err := db.AutoMigrate(&Customer{}); err != nil {
+		fmt.Printf("\n\nunable to create customer store: %v\n\n", err)
 		return nil, err
 	}
 	return &CustomerStore{
