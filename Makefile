@@ -20,6 +20,10 @@ dagger-build-env:
 dagger-test:
 	dagger call test --source=. --verbose
 
+dagger-lint:
+	dagger call lint --source=. --verbose
+
 bi: build-image
 pi: push-image
 dt: dagger-test
+dl: dagger-lint

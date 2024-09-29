@@ -3,10 +3,22 @@
   "sdk": "go",
   "dependencies": [
     {
+      "name": "docker",
+      "source": "github.com/levlaz/solomon-daggerverse/docker@e60de40604ebb7cc4bc1588d4f9b494864b0156f"
+    },
+    {
+      "name": "docker",
+      "source": "github.com/vito/daggerverse/docker@09c1b5b172e58a8fd58ee790d81018cd478590fc"
+    },
+    {
+      "name": "golang",
+      "source": "github.com/kpenfound/dagger-modules/golang@a22ea31658571ece79016162ecedabb7f7defe6a"
+    },
+    {
       "name": "testcontainers",
-      "source": "github.com/vito/daggerverse/testcontainers@a1647750b3ef09b83091b40185f498bb995ed540"
+      "source": "github.com/vito/daggerverse/testcontainers@cc3ab6f8db076c23bd31be9fd95bd1139c8925c4"
     }
   ],
   "source": "dagger",
-  "engineVersion": "v0.13.1"
+  "engineVersion": "v0.13.3"
 }
