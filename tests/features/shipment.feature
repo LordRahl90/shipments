@@ -6,3 +6,4 @@ Feature: Create Shipment
     When I create a shipment with country "se" and destination country of "se" and weight of 10.0
     Then I should see the shipment with price of 100.00
     Then I should see the shipment with a non empty reference
+

@@ -37,7 +37,7 @@ func main() {
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" || env == "development" {
 		if err := godotenv.Load(".envs/.env"); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 	slog.Info("starting server in " + env + " mode")

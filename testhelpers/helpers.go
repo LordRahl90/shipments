@@ -30,6 +30,7 @@ func SetupTestDB(ctx context.Context, container *mysqlModule.MySQLContainer) (*g
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("\n\nDSN: %s\n\n", dsn)
 	dsn = dsn + "?charset=utf8mb4&parseTime=True&loc=Local"
 
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{})

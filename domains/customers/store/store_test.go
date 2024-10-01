@@ -19,16 +19,16 @@ var (
 	db      *gorm.DB
 	storage ICustomerStore
 
-	//container = testhelpers.GetMySQLContainer(context.TODO())
+	container = testhelpers.GetMySQLContainer(context.TODO())
 )
 
 func TestMain(m *testing.M) {
 	code := 1
 	defer func() {
 		cleanup()
-		//if err := container.Terminate(context.TODO()); err != nil {
-		//	log.Fatalf("cannot stop container %s", err)
-		//}
+		if err := container.Terminate(context.TODO()); err != nil {
+			log.Fatalf("cannot stop container %s", err)
+		}
 		os.Exit(code)
 	}()
 	d, err := setupTestDB(context.TODO())
@@ -137,7 +137,7 @@ func newCustomer(t *testing.T) *Customer {
 }
 
 func setupTestDB(ctx context.Context) (*gorm.DB, error) {
-	return testhelpers.SetupTestDB(ctx, nil)
+	return testhelpers.SetupTestDB(ctx, container)
 }
 
 func cleanup() {

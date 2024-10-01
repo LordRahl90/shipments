@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"log"
 	"net/http"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	requests2 "shipments/testhelpers/requests"
 
 	"github.com/cucumber/godog"
+	"github.com/testcontainers/testcontainers-go"
 )
 
 type (
@@ -27,7 +29,8 @@ var (
 	//req requests.Shipment
 	name, email string
 
-	container = testhelpers.GetMySQLContainer(context.TODO())
+	container    = testhelpers.GetMySQLContainer(context.TODO())
+	appContainer testcontainers.Container
 )
 
 //var svr *servers.Server
@@ -40,6 +43,16 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 }
 
 func arrange(ctx context.Context, n, e string) (context.Context, error) {
+	fmt.Printf("Setting up the server")
+	host, err := container.ContainerIP(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	c, err := testhelpers.Package(ctx, host)
+	if err != nil {
+		return ctx, err
+	}
+	appContainer = c
 	fmt.Printf("Setting user with name and email to %s and %s\n", n, e)
 	name = n
 	email = e
@@ -48,6 +61,11 @@ func arrange(ctx context.Context, n, e string) (context.Context, error) {
 }
 
 func action(ctx context.Context, country, destination string, weight float64) (context.Context, error) {
+	ip, err := container.ContainerIP(ctx)
+	if err != nil {
+		return ctx, err
+	}
+	fmt.Printf("\n\nAction: %s\n\n", ip)
 	fmt.Printf("\n\nOrigin: %s, Destination: %s, Weight: %f\n\n", country, destination, weight)
 	req := requests.Shipment{
 		Name:        name,
